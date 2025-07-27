@@ -1,5 +1,5 @@
 Estate Auction Web Scraper
-An intelligent web scraper designed to identify undervalued items on slocalestateauctions.com and calculate potential resale profits.
+An intelligent web scraper designed to identify undervalued items and calculate potential resale profits.
 
 Overview
 This scraper automatically monitors estate auctions, identifies items with high profit potential, and provides market value estimates to help make informed bidding decisions. It focuses on items that are:
@@ -112,17 +112,17 @@ Core web scraping with Selenium
 SQLite database storage
 Keyword matching and valuable item detection
 Basic profit calculations
-Phase 2 (Weeks 3-4) 🚧
+Phase 2 🚧
 eBay Marketplace Insights API integration
 Automated price lookups across platforms
 Statistical analysis of sold items
 Confidence scoring for estimates
-Phase 3 (Weeks 5-6) 📋
+Phase 3 📋
 Bid management system
 Maximum profitable bid calculations
 Automated recommendations
 Export reports
-Phase 4 (Weeks 7-8) 🌐
+Phase 4 🌐
 Web interface with Flask/React
 Real-time dashboard
 Mobile responsive design

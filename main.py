@@ -10,7 +10,7 @@ import argparse
 from datetime import datetime
 from colorlog import ColoredFormatter
 
-from src.scraper import AuctionScraper
+from src.scraper.enhanced_auction_scraper import EnhancedAuctionScraper
 from src.database import DatabaseManager
 from src.config import LOGGING_CONFIG, PROFIT_CONFIG, WATCH_KEYWORDS
 
@@ -95,14 +95,14 @@ def view_database_summary():
     print("="*60)
     
     # Get active items
-    active_items = db_manager.get_active_items(limit=10)
-    print(f"\nActive items in database: {len(db_manager.get_active_items())}")
+    all_active = db_manager.get_active_items()
+    print(f"\nActive items in database: {len(all_active)}")
     
-    if active_items:
+    if all_active:
         print("\nMost recent items:")
         print("-"*40)
-        for item in active_items[:5]:
-            print(f"- {item.title[:60]}... (${item.current_bid:.2f})")
+        for item in all_active[:5]:
+            print(f"- {item['title'][:60]}... (${item['current_bid']:.2f})")
     
     # Get undervalued items
     undervalued = db_manager.get_undervalued_items(
@@ -115,10 +115,15 @@ def view_database_summary():
         for result in undervalued[:5]:
             item = result['item']
             analysis = result['analysis']
-            print(f"- {item.title[:50]}...")
-            print(f"  Current: ${item.current_bid:.2f}, "
-                  f"Est. Value: ${analysis.estimated_value:.2f}, "
-                  f"Margin: {analysis.profit_margin:.1f}%")
+            # These are still SQLAlchemy objects, need to handle differently
+            with db_manager.get_session() as session:
+                # Reattach objects to session
+                merged_item = session.merge(item)
+                merged_analysis = session.merge(analysis)
+                print(f"- {merged_item.title[:50]}...")
+                print(f"  Current: ${merged_item.current_bid:.2f}, "
+                      f"Est. Value: ${merged_analysis.estimated_value:.2f}, "
+                      f"Margin: {merged_analysis.profit_margin:.1f}%")
     
     print("\n" + "="*60 + "\n")
 
@@ -145,7 +150,7 @@ def main():
     # Action arguments
     parser.add_argument(
         'action',
-        choices=['scrape', 'view', 'watch', 'test'],
+        choices=['scrape', 'view', 'watch', 'test', 'monitor', 'check-urgent', 'test-notifications'],
         help='Action to perform'
     )
     
@@ -204,8 +209,8 @@ def main():
         if args.action == 'scrape':
             # Run the scraper
             logger.info("Starting auction scraper...")
-            scraper = AuctionScraper(headless=args.headless)
-            results = scraper.run(scrape_details=args.details)
+            scraper = EnhancedAuctionScraper(headless=args.headless)
+            results = scraper.run(max_auction_groups=args.pages or 3)
             display_results(results)
             
         elif args.action == 'view':
@@ -231,10 +236,28 @@ def main():
             print("\nDatabase connection: OK")
             
             # Test scraper initialization
-            scraper = AuctionScraper(headless=True)
+            scraper = EnhancedAuctionScraper(headless=True)
             print("Scraper initialization: OK")
             
             print("\nAll systems ready! Run 'python main.py scrape' to start scraping.")
+            
+        elif args.action == 'monitor':
+            # Start continuous monitoring
+            from src.scheduler.monitor import run_monitor_service
+            logger.info("Starting continuous monitoring service...")
+            run_monitor_service()
+            
+        elif args.action == 'check-urgent':
+            # Manual urgent item check
+            from src.scheduler.monitor import AuctionMonitor
+            monitor = AuctionMonitor()
+            monitor.run_manual_check()
+            
+        elif args.action == 'test-notifications':
+            # Test notification system
+            from src.notifications.notifier import AuctionNotifier
+            notifier = AuctionNotifier()
+            notifier.test_notifications()
     
     except KeyboardInterrupt:
         logger.info("Scraping interrupted by user")

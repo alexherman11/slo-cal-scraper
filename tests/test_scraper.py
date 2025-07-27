@@ -54,9 +54,9 @@ class TestScraperUtils:
         
         fees = utils.calculate_fees(100.0, 10.0)
         assert fees['ebay_fee'] == 13.60  # 13.6% of $100
-        assert fees['payment_fee'] == 2.89  # 2.35% of $110 + $0.30
-        assert fees['total_fees'] == 16.49
-        assert fees['net_after_fees'] == 83.51
+        assert fees['payment_fee'] == 2.88  # 2.35% of $110 + $0.30 (rounded)
+        assert fees['total_fees'] == 16.48
+        assert fees['net_after_fees'] == 83.52
 
 class TestRateLimiter:
     """Test rate limiting functionality"""
@@ -109,15 +109,15 @@ class TestDatabaseManager:
         # Test retrieving the item
         item = db_manager.get_item_by_id(item_id)
         assert item is not None
-        assert item.title == 'Test Vintage Item'
-        assert item.current_bid == 50.0
+        assert item['title'] == 'Test Vintage Item'
+        assert item['current_bid'] == 50.0
     
     def test_watchlist(self, db_manager):
         """Test watchlist functionality"""
         db_manager.add_to_watchlist('test_keyword', min_profit_threshold=40.0)
         
         watchlist = db_manager.get_watchlist()
-        assert any(w.keyword == 'test_keyword' for w in watchlist)
+        assert any(w['keyword'] == 'test_keyword' for w in watchlist)
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

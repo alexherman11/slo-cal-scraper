@@ -80,3 +80,28 @@ AVOID_KEYWORDS = [
     "replica", "reproduction", "style", "inspired", "damaged",
     "parts only", "not working", "for parts", "broken",
 ]
+
+# Monitoring and notification configuration
+MONITORING_CONFIG = {
+    # Check intervals
+    "urgent_check_interval": int(os.getenv("URGENT_CHECK_INTERVAL", "30")),  # minutes
+    "scrape_interval": int(os.getenv("SCRAPE_INTERVAL", "2")),  # hours
+    "cleanup_interval": int(os.getenv("CLEANUP_INTERVAL", "24")),  # hours
+    
+    # Alert thresholds
+    "urgent_hours_threshold": int(os.getenv("URGENT_HOURS_THRESHOLD", "24")),  # hours
+    "max_pages_per_scrape": int(os.getenv("MAX_PAGES_PER_SCRAPE", "3")),
+    
+    # Notification settings
+    "notifications": {
+        "desktop_notifications": os.getenv("DESKTOP_NOTIFICATIONS", "True").lower() == "true",
+        "email": {
+            "enabled": os.getenv("EMAIL_NOTIFICATIONS", "False").lower() == "true",
+            "smtp_server": os.getenv("SMTP_SERVER", "smtp.gmail.com"),
+            "smtp_port": int(os.getenv("SMTP_PORT", "587")),
+            "sender_email": os.getenv("SENDER_EMAIL", ""),
+            "sender_password": os.getenv("SENDER_PASSWORD", ""),
+            "recipient_email": os.getenv("RECIPIENT_EMAIL", ""),
+        }
+    }
+}

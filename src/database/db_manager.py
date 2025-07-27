@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from contextlib import contextmanager
 from sqlalchemy.orm import Session as SQLSession
@@ -58,7 +58,7 @@ class DatabaseManager:
                 # Update existing item
                 for key, value in item_data.items():
                     setattr(existing_item, key, value)
-                existing_item.updated_at = datetime.utcnow()
+                existing_item.updated_at = datetime.now(timezone.utc)
                 item_id = existing_item.item_id
                 
                 # Record bid history if price changed
@@ -88,7 +88,7 @@ class DatabaseManager:
         )
         session.add(history)
     
-    def get_active_items(self, limit: Optional[int] = None) -> List[Item]:
+    def get_active_items(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get all active auction items"""
         with self.get_session() as session:
             query = session.query(Item).filter_by(is_active=True)
@@ -97,7 +97,18 @@ class DatabaseManager:
             if limit:
                 query = query.limit(limit)
             
-            return query.all()
+            items = query.all()
+            # Convert to dict to avoid detached instance issues
+            return [{
+                'item_id': item.item_id,
+                'auction_id': item.auction_id,
+                'title': item.title,
+                'current_bid': item.current_bid,
+                'auction_end': item.auction_end,
+                'auction_url': item.auction_url,
+                'created_at': item.created_at,
+                'is_active': item.is_active
+            } for item in items]
     
     def get_items_by_keywords(self, keywords: List[str]) -> List[Item]:
         """Get items matching any of the keywords"""
@@ -137,6 +148,51 @@ class DatabaseManager:
             
             return results
     
+    def get_urgent_profitable_items(self, min_profit_margin: float = 50.0, hours_remaining: int = 24) -> List[Dict[str, Any]]:
+        """Get profitable items ending within specified hours"""
+        from datetime import timedelta
+        
+        cutoff_time = datetime.now() + timedelta(hours=hours_remaining)
+        
+        with self.get_session() as session:
+            query = session.query(
+                Item, ProfitAnalysis
+            ).join(
+                ProfitAnalysis, Item.item_id == ProfitAnalysis.item_id
+            ).filter(
+                and_(
+                    Item.is_active == True,
+                    ProfitAnalysis.profit_margin >= min_profit_margin,
+                    Item.auction_end <= cutoff_time,
+                    Item.auction_end > datetime.now()  # Not expired
+                )
+            ).order_by(Item.auction_end)  # Most urgent first
+            
+            results = []
+            for item, analysis in query.all():
+                # Calculate hours remaining
+                time_remaining = item.auction_end - datetime.now()
+                hours_left = time_remaining.total_seconds() / 3600
+                
+                results.append({
+                    'item': {
+                        'item_id': item.item_id,
+                        'auction_id': item.auction_id,
+                        'title': item.title,
+                        'current_bid': item.current_bid,
+                        'auction_end': item.auction_end,
+                        'auction_url': item.auction_url
+                    },
+                    'analysis': {
+                        'estimated_value': analysis.estimated_value,
+                        'profit_margin': analysis.profit_margin,
+                        'confidence_score': analysis.confidence_score
+                    },
+                    'hours_remaining': round(hours_left, 1)
+                })
+            
+            return results
+    
     def save_profit_analysis(self, analysis_data: Dict[str, Any]):
         """Save profit analysis for an item"""
         with self.get_session() as session:
@@ -144,7 +200,7 @@ class DatabaseManager:
             existing = session.query(ProfitAnalysis).filter(
                 and_(
                     ProfitAnalysis.item_id == analysis_data['item_id'],
-                    ProfitAnalysis.analysis_date >= datetime.utcnow().date()
+                    ProfitAnalysis.analysis_date >= datetime.now(timezone.utc).date()
                 )
             ).first()
             
@@ -157,13 +213,23 @@ class DatabaseManager:
                 analysis = ProfitAnalysis(**analysis_data)
                 session.add(analysis)
     
-    def get_watchlist(self, active_only: bool = True) -> List[Watchlist]:
+    def get_watchlist(self, active_only: bool = True) -> List[Dict[str, Any]]:
         """Get watchlist items"""
         with self.get_session() as session:
             query = session.query(Watchlist)
             if active_only:
                 query = query.filter_by(is_active=True)
-            return query.all()
+            watchlist = query.all()
+            # Convert to dict to avoid detached instance issues
+            return [{
+                'watch_id': w.watch_id,
+                'keyword': w.keyword,
+                'category': w.category,
+                'min_profit_threshold': w.min_profit_threshold,
+                'max_bid_amount': w.max_bid_amount,
+                'is_active': w.is_active,
+                'created_at': w.created_at
+            } for w in watchlist]
     
     def add_to_watchlist(self, keyword: str, **kwargs):
         """Add keyword to watchlist"""
@@ -177,7 +243,7 @@ class DatabaseManager:
             expired_items = session.query(Item).filter(
                 and_(
                     Item.is_active == True,
-                    Item.auction_end < datetime.utcnow()
+                    Item.auction_end < datetime.now(timezone.utc)
                 )
             ).all()
             
@@ -186,10 +252,23 @@ class DatabaseManager:
             
             return len(expired_items)
     
-    def get_item_by_id(self, item_id: int) -> Optional[Item]:
+    def get_item_by_id(self, item_id: int) -> Optional[Dict[str, Any]]:
         """Get item by ID"""
         with self.get_session() as session:
-            return session.query(Item).filter_by(item_id=item_id).first()
+            item = session.query(Item).filter_by(item_id=item_id).first()
+            if item:
+                # Convert to dict to avoid detached instance issues
+                return {
+                    'item_id': item.item_id,
+                    'auction_id': item.auction_id,
+                    'title': item.title,
+                    'current_bid': item.current_bid,
+                    'auction_end': item.auction_end,
+                    'auction_url': item.auction_url,
+                    'created_at': item.created_at,
+                    'is_active': item.is_active
+                }
+            return None
     
     def get_bid_history(self, item_id: int) -> List[BidHistory]:
         """Get bid history for an item"""

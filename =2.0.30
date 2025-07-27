@@ -1,0 +1,4 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: sqlalchemy in c:\users\1whee\appdata\roaming\python\python313\site-packages (2.0.25)
+Requirement already satisfied: typing-extensions>=4.6.0 in c:\users\1whee\appdata\roaming\python\python313\site-packages (from sqlalchemy) (4.12.2)
+Requirement already satisfied: greenlet!=0.4.17 in c:\users\1whee\appdata\roaming\python\python313\site-packages (from sqlalchemy) (3.2.3)

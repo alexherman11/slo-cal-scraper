@@ -1,7 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from src.config.settings import DATABASE_CONFIG
 
 Base = declarative_base()
@@ -20,8 +19,8 @@ class Item(Base):
     current_bid = Column(Float, nullable=False)
     auction_end = Column(DateTime, nullable=False)
     auction_url = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
     
     def __repr__(self):
@@ -33,7 +32,7 @@ class BidHistory(Base):
     history_id = Column(Integer, primary_key=True)
     item_id = Column(Integer, nullable=False)
     bid_amount = Column(Float, nullable=False)
-    recorded_at = Column(DateTime, default=datetime.utcnow)
+    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     bid_count = Column(Integer)
     
     def __repr__(self):
@@ -49,7 +48,7 @@ class ComparableSale(Base):
     sale_date = Column(DateTime)
     listing_url = Column(String)
     confidence_score = Column(Float)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f"<ComparableSale(platform={self.platform}, price=${self.sale_price})>"
@@ -65,7 +64,7 @@ class ProfitAnalysis(Base):
     profit_margin = Column(Float)
     confidence_score = Column(Float)
     recommendation = Column(String)
-    analysis_date = Column(DateTime, default=datetime.utcnow)
+    analysis_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f"<ProfitAnalysis(item_id={self.item_id}, margin={self.profit_margin}%)>"
@@ -79,7 +78,7 @@ class Watchlist(Base):
     min_profit_threshold = Column(Float, default=50.0)
     max_bid_amount = Column(Float)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f"<Watchlist(keyword='{self.keyword}', threshold={self.min_profit_threshold}%)>"
@@ -88,7 +87,7 @@ class ScrapeSession(Base):
     __tablename__ = 'scrape_sessions'
     
     session_id = Column(Integer, primary_key=True)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     ended_at = Column(DateTime)
     items_found = Column(Integer, default=0)
     items_flagged = Column(Integer, default=0)
