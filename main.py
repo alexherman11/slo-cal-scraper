@@ -10,7 +10,7 @@ import argparse
 from datetime import datetime
 from colorlog import ColoredFormatter
 
-from src.scraper.enhanced_auction_scraper import EnhancedAuctionScraper
+from src.scraper.robust_auction_scraper import RobustAuctionScraper
 from src.database import DatabaseManager
 from src.config import LOGGING_CONFIG, PROFIT_CONFIG, WATCH_KEYWORDS
 
@@ -209,7 +209,7 @@ def main():
         if args.action == 'scrape':
             # Run the scraper
             logger.info("Starting auction scraper...")
-            scraper = EnhancedAuctionScraper(headless=args.headless)
+            scraper = RobustAuctionScraper(headless=args.headless)
             results = scraper.run(max_auction_groups=args.pages or 3)
             display_results(results)
             
@@ -236,7 +236,7 @@ def main():
             print("\nDatabase connection: OK")
             
             # Test scraper initialization
-            scraper = EnhancedAuctionScraper(headless=True)
+            scraper = RobustAuctionScraper(headless=True)
             print("Scraper initialization: OK")
             
             print("\nAll systems ready! Run 'python main.py scrape' to start scraping.")
